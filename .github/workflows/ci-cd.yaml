@@ -6,12 +6,6 @@ on:
   pull_request:
     branches: [main, develop]
 
-env:
-  # Switch to Docker Hub instead of GitHub Container Registry
-  REGISTRY: docker.io
-  IMAGE_PREFIX: yashmak22
-  KUBECONFIG_SECRET: ${{ secrets.KUBECONFIG }}
-
 jobs:
   # Run tests and linting
   test:
@@ -86,94 +80,22 @@ jobs:
         working-directory: ${{ matrix.service }}
         run: pytest
 
-  # Build and push Docker images
-  build:
+  # Notification that tests passed
+  notify-success:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-    strategy:
-      matrix:
-        service:
-          - agent-service
-          - prompt-service
-          - memory-service
-          - tools-service
-          - dashboard
     steps:
-      - uses: actions/checkout@v3
-      
       - name: Set environment variables
         run: |
           if [[ $GITHUB_REF == 'refs/heads/main' ]]; then
-            echo "ENV_NAME=prod" >> $GITHUB_ENV
-            echo "VERSION=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+            echo "ENV_NAME=production" >> $GITHUB_ENV
           else
-            echo "ENV_NAME=dev" >> $GITHUB_ENV
-            echo "VERSION=dev-$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+            echo "ENV_NAME=development" >> $GITHUB_ENV
           fi
       
-      - name: Login to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ env.IMAGE_PREFIX }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
-      - name: Build and push
-        uses: docker/build-push-action@v4
-        with:
-          context: ./${{ matrix.service }}
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/alpha-${{ matrix.service }}:${{ env.VERSION }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/alpha-${{ matrix.service }}:latest-${{ env.ENV_NAME }}
-
-  # Deploy to Kubernetes
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Set environment variables
+      - name: Notification
         run: |
-          if [[ $GITHUB_REF == 'refs/heads/main' ]]; then
-            echo "ENV_NAME=prod" >> $GITHUB_ENV
-            echo "VERSION=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
-          else
-            echo "ENV_NAME=dev" >> $GITHUB_ENV
-            echo "VERSION=dev-$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
-          fi
-      
-      - name: Setup Kustomize
-        uses: imranismail/setup-kustomize@v1
-        with:
-          kustomize-version: "4.5.7"
-      
-      - name: Update Kustomization
-        run: |
-          cd k8s/overlays/${{ env.ENV_NAME }}
-          
-          # Update image tags
-          for service in agent-service prompt-service memory-service tools-service dashboard; do
-            kustomize edit set image alpha/${service}=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/alpha-${service}:${{ env.VERSION }}
-          done
-      
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'v1.25.0'
-      
-      - name: Configure kubeconfig
-        run: |
-          echo "${{ env.KUBECONFIG_SECRET }}" > kubeconfig.yaml
-          chmod 600 kubeconfig.yaml
-          export KUBECONFIG=kubeconfig.yaml
-      
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -k k8s/overlays/${{ env.ENV_NAME }}
-      
-      - name: Clean up kubeconfig
-        run: rm -f kubeconfig.yaml
+          echo "✅ All tests have passed! Changes are being deployed to ${{ env.ENV_NAME }} environment."
+          echo "Render.com will automatically deploy the services from your GitHub repository."
+          echo "Check your Render.com dashboard for deployment status."
