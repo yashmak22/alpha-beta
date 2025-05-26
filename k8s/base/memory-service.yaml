@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-service
+  labels:
+    app: memory-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memory-service
+  template:
+    metadata:
+      labels:
+        app: memory-service
+    spec:
+      containers:
+      - name: memory-service
+        image: alpha/memory-service:latest
+        ports:
+        - containerPort: 3003
+        env:
+        - name: DEBUG
+          value: "false"
+        - name: MILVUS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: alpha-config
+              key: milvus-host
+        - name: MILVUS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: alpha-config
+              key: milvus-port
+        - name: NEO4J_URI
+          valueFrom:
+            configMapKeyRef:
+              name: alpha-config
+              key: neo4j-uri
+        - name: NEO4J_USER
+          valueFrom:
+            secretKeyRef:
+              name: memory-service-secrets
+              key: neo4j-user
+        - name: NEO4J_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: memory-service-secrets
+              key: neo4j-password
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: alpha-config
+              key: redis-host
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: alpha-config
+              key: redis-port
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "1Gi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3003
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3003
+          initialDelaySeconds: 60
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memory-service
+spec:
+  selector:
+    app: memory-service
+  ports:
+  - port: 80
+    targetPort: 3003
+  type: ClusterIP

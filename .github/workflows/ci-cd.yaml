@@ -1,0 +1,167 @@
+name: Alpha Platform CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  REGISTRY: ghcr.io
+  KUBECONFIG_SECRET: ${{ secrets.KUBECONFIG }}
+
+jobs:
+  # Run tests and linting
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - agent-service
+          - prompt-service
+          - memory-service
+          - tools-service
+          - dashboard
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        if: ${{ matrix.service == 'agent-service' || matrix.service == 'prompt-service' || matrix.service == 'dashboard' }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          cache: 'npm'
+          cache-dependency-path: ${{ matrix.service }}/package-lock.json
+      
+      - name: Set up Python
+        if: ${{ matrix.service == 'memory-service' || matrix.service == 'tools-service' }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          cache-dependency-path: ${{ matrix.service }}/requirements.txt
+      
+      - name: Install dependencies (Node.js)
+        if: ${{ matrix.service == 'agent-service' || matrix.service == 'prompt-service' || matrix.service == 'dashboard' }}
+        working-directory: ${{ matrix.service }}
+        run: npm ci
+      
+      - name: Install dependencies (Python)
+        if: ${{ matrix.service == 'memory-service' || matrix.service == 'tools-service' }}
+        working-directory: ${{ matrix.service }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov flake8
+      
+      - name: Run linting (Node.js)
+        if: ${{ matrix.service == 'agent-service' || matrix.service == 'prompt-service' || matrix.service == 'dashboard' }}
+        working-directory: ${{ matrix.service }}
+        run: npm run lint
+      
+      - name: Run linting (Python)
+        if: ${{ matrix.service == 'memory-service' || matrix.service == 'tools-service' }}
+        working-directory: ${{ matrix.service }}
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+      
+      - name: Run tests (Node.js)
+        if: ${{ matrix.service == 'agent-service' || matrix.service == 'prompt-service' || matrix.service == 'dashboard' }}
+        working-directory: ${{ matrix.service }}
+        run: npm test
+      
+      - name: Run tests (Python)
+        if: ${{ matrix.service == 'memory-service' || matrix.service == 'tools-service' }}
+        working-directory: ${{ matrix.service }}
+        run: pytest
+
+  # Build and push Docker images
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    strategy:
+      matrix:
+        service:
+          - agent-service
+          - prompt-service
+          - memory-service
+          - tools-service
+          - dashboard
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set environment variables
+        run: |
+          if [[ $GITHUB_REF == 'refs/heads/main' ]]; then
+            echo "ENV_NAME=prod" >> $GITHUB_ENV
+            echo "VERSION=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+          else
+            echo "ENV_NAME=dev" >> $GITHUB_ENV
+            echo "VERSION=dev-$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+          fi
+      
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: ./${{ matrix.service }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/alpha-${{ matrix.service }}:${{ env.VERSION }}
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/alpha-${{ matrix.service }}:latest-${{ env.ENV_NAME }}
+
+  # Deploy to Kubernetes
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set environment variables
+        run: |
+          if [[ $GITHUB_REF == 'refs/heads/main' ]]; then
+            echo "ENV_NAME=prod" >> $GITHUB_ENV
+            echo "VERSION=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+          else
+            echo "ENV_NAME=dev" >> $GITHUB_ENV
+            echo "VERSION=dev-$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+          fi
+      
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@v1
+        with:
+          kustomize-version: "4.5.7"
+      
+      - name: Update Kustomization
+        run: |
+          cd k8s/overlays/${{ env.ENV_NAME }}
+          
+          # Update image tags
+          for service in agent-service prompt-service memory-service tools-service dashboard; do
+            kustomize edit set image alpha/${service}=${{ env.REGISTRY }}/${{ github.repository_owner }}/alpha-${service}:${{ env.VERSION }}
+          done
+      
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.25.0'
+      
+      - name: Configure kubeconfig
+        run: |
+          echo "${{ env.KUBECONFIG_SECRET }}" > kubeconfig.yaml
+          chmod 600 kubeconfig.yaml
+          export KUBECONFIG=kubeconfig.yaml
+      
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -k k8s/overlays/${{ env.ENV_NAME }}
+      
+      - name: Clean up kubeconfig
+        run: rm -f kubeconfig.yaml

@@ -1,0 +1,111 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+input CreatePromptInput {
+  content: String!
+  description: String
+  isPublic: Boolean! = false
+  name: String!
+  ownerId: String
+  tags: [String!]! = []
+}
+
+input CreateTemplateInput {
+  category: String!
+  content: String!
+  createdById: String
+  description: String
+  isActive: Boolean! = true
+  isPublic: Boolean! = true
+  name: String!
+  tags: [String!]! = []
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Mutation {
+  createPrompt(createPromptInput: CreatePromptInput!): Prompt!
+  createPromptTemplate(createTemplateInput: CreateTemplateInput!): PromptTemplate!
+  removePrompt(id: ID!): Boolean!
+  removePromptTemplate(id: ID!): Boolean!
+  updatePrompt(updatePromptInput: UpdatePromptInput!): Prompt!
+  updatePromptTemplate(updateTemplateInput: UpdateTemplateInput!): PromptTemplate!
+}
+
+type Prompt {
+  createdAt: DateTime!
+  currentVersion: Float!
+  description: String
+  id: ID!
+  isPublic: Boolean!
+  name: String!
+  ownerId: String
+  tags: [String!]!
+  updatedAt: DateTime!
+  versions: [PromptVersion!]!
+}
+
+type PromptTemplate {
+  category: String!
+  content: String!
+  createdAt: DateTime!
+  createdById: String
+  description: String
+  id: ID!
+  isActive: Boolean!
+  isPublic: Boolean!
+  name: String!
+  tags: [String!]!
+  updatedAt: DateTime!
+}
+
+type PromptVersion {
+  content: String!
+  createdAt: DateTime!
+  createdById: String
+  id: ID!
+  prompt: Prompt!
+  promptId: String!
+  version: Int!
+}
+
+type Query {
+  currentPromptVersion(promptId: ID!): PromptVersion!
+  prompt(id: ID!): Prompt!
+  promptContent(promptId: ID!, version: Int): String!
+  promptTemplate(id: ID!): PromptTemplate!
+  promptTemplates: [PromptTemplate!]!
+  promptTemplatesByCategory(category: String!): [PromptTemplate!]!
+  promptTemplatesByTags(tags: [String!]!): [PromptTemplate!]!
+  promptVersion(promptId: ID!, version: Int!): PromptVersion!
+  prompts: [Prompt!]!
+  promptsByOwner(ownerId: ID!): [Prompt!]!
+  publicPromptTemplates: [PromptTemplate!]!
+  publicPrompts: [Prompt!]!
+}
+
+input UpdatePromptInput {
+  content: String
+  description: String
+  id: ID!
+  isPublic: Boolean = false
+  name: String
+  ownerId: String
+  tags: [String!] = []
+}
+
+input UpdateTemplateInput {
+  category: String
+  content: String
+  createdById: String
+  description: String
+  id: ID!
+  isActive: Boolean = true
+  isPublic: Boolean = true
+  name: String
+  tags: [String!] = []
+}

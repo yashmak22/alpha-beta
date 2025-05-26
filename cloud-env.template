@@ -1,0 +1,32 @@
+# Shared environment variables for Alpha Platform cloud deployment
+
+# Database - Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_KEY=your-supabase-key
+SUPABASE_SERVICE_KEY=your-supabase-service-key
+
+# Redis - Upstash
+REDIS_URL=redis://your-redis-instance.upstash.io:6379
+REDIS_PASSWORD=your-redis-password
+
+# General
+NODE_ENV=production
+API_KEY=your-api-key-for-service-communication
+
+# Service URLs
+AGENT_SERVICE_URL=https://alpha-agent-service.onrender.com
+PROMPT_SERVICE_URL=https://alpha-prompt-service.onrender.com
+MEMORY_SERVICE_URL=https://alpha-memory-service.onrender.com
+TOOLS_SERVICE_URL=https://alpha-tools-service.onrender.com
+EVALUATION_SERVICE_URL=https://alpha-evaluation-service.onrender.com
+
+# API Gateway
+API_GATEWAY_URL=https://alpha-api-gateway.onrender.com
+
+# Vector Embeddings - OpenAI
+OPENAI_API_KEY=your-openai-api-key
+
+# Kafka Alternative - Upstash Kafka
+KAFKA_BROKERS=your-kafka-broker.upstash.io:9092
+KAFKA_USERNAME=your-kafka-username
+KAFKA_PASSWORD=your-kafka-password

@@ -1,0 +1,100 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type Agent {
+  allowedKnowledgeBases: [String!]
+  createdAt: DateTime!
+  description: String
+  enabledTools: [String!]
+  id: ID!
+  isActive: Boolean!
+  isPublic: Boolean!
+  memoryEnabled: Boolean!
+  modelId: String!
+  name: String!
+  ownerId: String
+  promptId: String!
+  sessions: [Session!]
+  updatedAt: DateTime!
+}
+
+input CreateAgentInput {
+  allowedKnowledgeBases: [String!]
+  description: String
+  enabledTools: [String!]
+  isActive: Boolean! = true
+  isPublic: Boolean! = false
+  memoryEnabled: Boolean! = false
+  modelId: String!
+  name: String!
+  ownerId: String
+  promptId: String!
+}
+
+input CreateSessionInput {
+  agentId: String!
+  name: String
+  userId: String
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Mutation {
+  createAgent(createAgentInput: CreateAgentInput!): Agent!
+  createSession(createSessionInput: CreateSessionInput!): Session!
+  endSession(id: ID!): Session!
+  removeAgent(id: ID!): Boolean!
+  removeSession(id: ID!): Boolean!
+  updateAgent(updateAgentInput: UpdateAgentInput!): Agent!
+  updateSession(updateSessionInput: UpdateSessionInput!): Session!
+}
+
+type Query {
+  activeSessions: [Session!]!
+  agent(id: ID!): Agent!
+  agents: [Agent!]!
+  agentsByOwner(ownerId: ID!): [Agent!]!
+  publicAgents: [Agent!]!
+  session(id: ID!): Session!
+  sessions: [Session!]!
+  sessionsByAgent(agentId: ID!): [Session!]!
+  sessionsByUser(userId: ID!): [Session!]!
+}
+
+type Session {
+  agent: Agent!
+  agentId: String!
+  createdAt: DateTime!
+  endedAt: DateTime
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  updatedAt: DateTime!
+  userId: String
+}
+
+input UpdateAgentInput {
+  allowedKnowledgeBases: [String!]
+  description: String
+  enabledTools: [String!]
+  id: ID!
+  isActive: Boolean = true
+  isPublic: Boolean = false
+  memoryEnabled: Boolean = false
+  modelId: String
+  name: String
+  ownerId: String
+  promptId: String
+}
+
+input UpdateSessionInput {
+  agentId: String
+  id: ID!
+  isActive: Boolean
+  name: String
+  userId: String
+}

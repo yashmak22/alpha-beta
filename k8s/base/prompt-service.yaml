@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prompt-service
+  labels:
+    app: prompt-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prompt-service
+  template:
+    metadata:
+      labels:
+        app: prompt-service
+    spec:
+      containers:
+      - name: prompt-service
+        image: alpha/prompt-service:latest
+        ports:
+        - containerPort: 3002
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "3002"
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: prompt-service-secrets
+              key: database-url
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: alpha-config
+              key: redis-host
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 20
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3002
+          initialDelaySeconds: 30
+          periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prompt-service
+spec:
+  selector:
+    app: prompt-service
+  ports:
+  - port: 80
+    targetPort: 3002
+  type: ClusterIP

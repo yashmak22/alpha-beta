@@ -1,0 +1,154 @@
+# Render Blueprint API
+# https://render.com/docs/blueprint-spec
+
+services:
+  # Agent Service
+  - type: web
+    name: alpha-agent-service
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: node dist/main.js
+    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    branch: main
+    buildFilter:
+      paths:
+        - agent-service/**
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: DATABASE_URL
+        sync: false  # This will be manually set in Render dashboard
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: REDIS_URL
+        sync: false
+
+  # Prompt Service
+  - type: web
+    name: alpha-prompt-service
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: node dist/main.js
+    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    branch: main
+    buildFilter:
+      paths:
+        - prompt-service/**
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3002
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+
+  # Memory Service
+  - type: web
+    name: alpha-memory-service
+    env: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: python app.py
+    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    branch: main
+    buildFilter:
+      paths:
+        - memory-service/**
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  # Tools Service
+  - type: web
+    name: alpha-tools-service
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: node dist/main.js
+    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    branch: main
+    buildFilter:
+      paths:
+        - tools-service/**
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3004
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+
+  # Evaluation Service
+  - type: web
+    name: alpha-evaluation-service
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: node dist/main.js
+    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    branch: main
+    buildFilter:
+      paths:
+        - evaluation-service/**
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3005
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+
+  # API Gateway - main entry point for all services
+  - type: web
+    name: alpha-api-gateway
+    env: node
+    plan: starter
+    buildCommand: cd api-gateway && npm install
+    startCommand: cd api-gateway && node index.js
+    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    branch: main
+    buildFilter:
+      paths:
+        - api-gateway/**
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 8080
+      - key: API_KEY
+        generateValue: true
+      - key: AGENT_SERVICE_URL
+        value: https://alpha-agent-service.onrender.com
+      - key: PROMPT_SERVICE_URL
+        value: https://alpha-prompt-service.onrender.com
+      - key: MEMORY_SERVICE_URL
+        value: https://alpha-memory-service.onrender.com
+      - key: TOOLS_SERVICE_URL
+        value: https://alpha-tools-service.onrender.com
+      - key: EVALUATION_SERVICE_URL
+        value: https://alpha-evaluation-service.onrender.com
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false

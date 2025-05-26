@@ -1,0 +1,201 @@
+version: '3.8'
+
+services:
+  # Frontend
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "3005:3000"
+    env_file:
+      - ./dashboard/.env.local
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+    depends_on:
+      - agent-service
+      - prompt-service
+      - memory-service
+      - tools-service
+    volumes:
+      - ./dashboard:/app
+      - /app/node_modules
+
+  # Backend Microservices
+  agent-service:
+    build: ./agent-service
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./agent-service/.env
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    command: npm run start:dev
+    volumes:
+      - ./agent-service:/app
+      - /app/node_modules
+
+  prompt-service:
+    build: ./prompt-service
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./prompt-service/.env
+    environment:
+      - NODE_ENV=development
+    depends_on:
+      - postgres
+      - redis
+    command: npm run start:dev
+    volumes:
+      - ./prompt-service:/app
+      - /app/node_modules
+
+  memory-service:
+    build: ./memory-service
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./memory-service/.env
+    environment:
+      - DEBUG=True
+    depends_on:
+      - milvus
+      - neo4j
+      - redis
+    volumes:
+      - ./memory-service:/app
+
+  tools-service:
+    build: ./tools-service
+    ports:
+      - "3004:3004"
+    env_file:
+      - ./tools-service/.env
+    environment:
+      - DEBUG=True
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - ./tools-service:/app
+
+  # Databases
+  postgres:
+    image: postgres:14
+    ports:
+      - "5432:5432"
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_MULTIPLE_DATABASES=alpha_agent,alpha_prompt
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./docker/postgres/create-multiple-db.sh:/docker-entrypoint-initdb.d/create-multiple-db.sh
+
+  mongo:
+    image: mongo:5
+    ports:
+      - "27017:27017"
+    env_file:
+      - ./.env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:6
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+
+  # Vector Database - Milvus Standalone
+  milvus:
+    image: milvusdb/milvus:latest
+    ports:
+      - "19530:19530"
+      - "9091:9091"
+    environment:
+      - ETCD_ENDPOINTS=etcd:2379
+      - MINIO_ADDRESS=minio:9000
+    command: ["milvus", "run", "standalone"]
+    depends_on:
+      - etcd
+      - minio
+    volumes:
+      - milvus-data:/var/lib/milvus
+
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.0
+    environment:
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+    volumes:
+      - etcd-data:/etcd
+
+  minio:
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    env_file:
+      - ./.env
+    environment:
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+    volumes:
+      - minio-data:/data
+    command: ["minio", "server", "/data"]
+
+  # Graph Database
+  neo4j:
+    image: neo4j:5.6.0
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    env_file:
+      - ./.env
+    environment:
+      - NEO4J_AUTH=${NEO4J_AUTH}
+    volumes:
+      - neo4j-data:/data
+
+  # Message Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.3.0
+    ports:
+      - "9092:9092"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+    depends_on:
+      - zookeeper
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.0
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-log-data:/var/lib/zookeeper/log
+
+volumes:
+  postgres-data:
+  mongo-data:
+  redis-data:
+  milvus-data:
+  etcd-data:
+  minio-data:
+  neo4j-data:
+  zookeeper-data:
+  zookeeper-log-data:

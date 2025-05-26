@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - agent-service.yaml
+  - prompt-service.yaml
+  - memory-service.yaml
+  - tools-service.yaml
+  - dashboard.yaml
+  - config.yaml
+  - secrets.yaml
+  - postgres.yaml
+  - mongodb.yaml
+  - redis.yaml
+  - neo4j.yaml
+  - milvus.yaml
+  - kafka.yaml

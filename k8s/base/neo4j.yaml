@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: neo4j
+spec:
+  serviceName: neo4j
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neo4j
+  template:
+    metadata:
+      labels:
+        app: neo4j
+    spec:
+      containers:
+      - name: neo4j
+        image: neo4j:5.6.0
+        ports:
+        - containerPort: 7474
+          name: http
+        - containerPort: 7687
+          name: bolt
+        env:
+        - name: NEO4J_AUTH
+          value: "neo4j/password"
+        - name: NEO4J_dbms_memory_pagecache_size
+          value: "512M"
+        - name: NEO4J_dbms_memory_heap_initial__size
+          value: "512M"
+        - name: NEO4J_dbms_memory_heap_max__size
+          value: "1G"
+        volumeMounts:
+        - name: neo4j-data
+          mountPath: /data
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+        readinessProbe:
+          tcpSocket:
+            port: 7687
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: 7687
+          initialDelaySeconds: 120
+          periodSeconds: 20
+  volumeClaimTemplates:
+  - metadata:
+      name: neo4j-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neo4j
+spec:
+  selector:
+    app: neo4j
+  ports:
+  - port: 7474
+    name: http
+    targetPort: 7474
+  - port: 7687
+    name: bolt
+    targetPort: 7687
+  clusterIP: None

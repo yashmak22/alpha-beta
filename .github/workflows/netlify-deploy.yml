@@ -1,0 +1,76 @@
+name: Deploy to Netlify
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'dashboard/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'dashboard/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'dashboard/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: dashboard
+        run: npm ci
+
+      - name: Run TypeScript check
+        working-directory: dashboard
+        run: npm run tsc --if-present
+
+      - name: Run linting
+        working-directory: dashboard
+        run: npm run lint --if-present
+
+      - name: Run tests
+        working-directory: dashboard
+        run: npm test --if-present
+
+      # Deploy only on push to main, not on PRs
+      - name: Deploy to Netlify (production)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: nwtgck/actions-netlify@v2.0
+        with:
+          publish-dir: './dashboard/.next'
+          production-branch: main
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Deploy from GitHub Actions"
+          enable-pull-request-comment: true
+          enable-commit-comment: true
+          overwrites-pull-request-comment: true
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        timeout-minutes: 10
+
+      # For pull requests, deploy as preview
+      - name: Deploy to Netlify (preview)
+        if: github.event_name == 'pull_request'
+        uses: nwtgck/actions-netlify@v2.0
+        with:
+          publish-dir: './dashboard/.next'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          deploy-message: "Deploy from GitHub Actions (PR preview)"
+          enable-pull-request-comment: true
+          enable-commit-comment: false
+          overwrites-pull-request-comment: true
+          alias: deploy-preview-${{ github.event.number }}
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+        timeout-minutes: 10
