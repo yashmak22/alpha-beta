@@ -21,31 +21,23 @@ import { TemplateModule } from './modules/template/template.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        // Get Supabase connection details
-        const supabaseUrl = configService.get('SUPABASE_URL');
-        const supabaseKey = configService.get('SUPABASE_SERVICE_KEY');
-        
-        // Extract the database credentials from the Supabase URL
-        // Format: https://[project_id].supabase.co
-        const projectId = supabaseUrl?.match(/https:\/\/([^\.]+)\.supabase\.co/)?.[1];
-        
-        // Fallback to DATABASE_URL if provided
+        // Always prioritize using the explicit DATABASE_URL in production to avoid DNS resolution issues
         const databaseUrl = configService.get('DATABASE_URL');
+        const nodeEnv = configService.get('NODE_ENV');
         
-        // Use direct Supabase database connection if credentials are available
-        if (projectId && supabaseKey) {
-          console.log('Connecting to Supabase database');
+        // In production, always use the DATABASE_URL with explicit IPv4 configuration
+        if (databaseUrl) {
+          console.log('Connecting using DATABASE_URL with IPv4 forced');
           return {
             type: 'postgres',
-            host: `db.${projectId}.supabase.co`,
-            port: 5432,
-            username: 'postgres',
-            password: supabaseKey,
-            database: 'postgres',
+            url: databaseUrl,
             entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-            synchronize: false, // Disable auto-sync for production
+            synchronize: false, // Never synchronize in production
+            logging: false,
             ssl: true,
             extra: {
+              // Force IPv4 connections
+              family: 4,
               ssl: {
                 rejectUnauthorized: false
               }
@@ -53,16 +45,30 @@ import { TemplateModule } from './modules/template/template.module';
           };
         }
         
-        // Fallback to DATABASE_URL if Supabase details are not available
-        if (databaseUrl) {
-          console.log('Connecting using DATABASE_URL');
+        // Fallback to Supabase credentials if DATABASE_URL is not available
+        const supabaseUrl = configService.get('SUPABASE_URL');
+        const supabaseKey = configService.get('SUPABASE_SERVICE_KEY');
+        const projectId = supabaseUrl?.match(/https:\/\/([^\.]+)\.supabase\.co/)?.[1];
+        
+        if (projectId && supabaseKey) {
+          console.log('Connecting to Supabase database with IPv4 forced');
           return {
             type: 'postgres',
-            url: databaseUrl,
+            host: `34.102.90.143`, // Use explicit IP instead of hostname
+            port: 5432,
+            username: 'postgres',
+            password: supabaseKey,
+            database: 'postgres',
             entities: [join(__dirname, '**', '*.entity.{ts,js}')],
-            synchronize: configService.get('NODE_ENV') !== 'production',
-            logging: configService.get('NODE_ENV') === 'development',
-            ssl: configService.get('NODE_ENV') === 'production',
+            synchronize: false,
+            ssl: true,
+            extra: {
+              // Force IPv4 connections
+              family: 4,
+              ssl: {
+                rejectUnauthorized: false
+              }
+            }
           };
         }
         
