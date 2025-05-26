@@ -22,12 +22,23 @@ import { KafkaModule } from './modules/kafka/kafka.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => {
-        // Always prioritize using the explicit DATABASE_URL in production to avoid DNS resolution issues
-        const databaseUrl = configService.get('DATABASE_URL');
         const nodeEnv = configService.get('NODE_ENV');
         
-        // In production, always use the DATABASE_URL with explicit IPv4 configuration
-        if (databaseUrl) {
+        // In test environment, use an in-memory SQLite database
+        if (nodeEnv === 'test') {
+          console.log('Running in test environment, using in-memory SQLite database');
+          return {
+            type: 'sqlite',
+            database: ':memory:',
+            entities: [join(__dirname, '**', '*.entity.{ts,js}')],
+            synchronize: true,
+            logging: false,
+          };
+        }
+        
+        // In production, prioritize using the explicit DATABASE_URL
+        const databaseUrl = configService.get('DATABASE_URL');
+        if (databaseUrl && nodeEnv === 'production') {
           console.log('Connecting using DATABASE_URL with IPv4 forced');
           return {
             type: 'postgres',
@@ -55,7 +66,7 @@ import { KafkaModule } from './modules/kafka/kafka.module';
           console.log('Connecting to Supabase database with IPv4 forced');
           return {
             type: 'postgres',
-            host: `34.102.90.143`, // Use explicit IP instead of hostname
+            host: nodeEnv === 'production' ? `34.102.90.143` : `db.${projectId}.supabase.co`, // Use explicit IP in production
             port: 5432,
             username: 'postgres',
             password: supabaseKey,
@@ -64,8 +75,8 @@ import { KafkaModule } from './modules/kafka/kafka.module';
             synchronize: false,
             ssl: true,
             extra: {
-              // Force IPv4 connections
-              family: 4,
+              // Force IPv4 connections in production
+              ...(nodeEnv === 'production' ? { family: 4 } : {}),
               ssl: {
                 rejectUnauthorized: false
               }
