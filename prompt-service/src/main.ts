@@ -1,6 +1,14 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, Get, Controller } from '@nestjs/common';
 import { AppModule } from './app.module';
+
+@Controller('health')
+class HealthController {
+  @Get()
+  check() {
+    return { status: 'ok', timestamp: new Date().toISOString() };
+  }
+}
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -17,8 +25,16 @@ async function bootstrap() {
   // Enable CORS
   app.enableCors();
   
-  // Set global prefix for REST endpoints
-  app.setGlobalPrefix('api');
+  // Set global prefix for REST endpoints except health check
+  app.setGlobalPrefix('api', {
+    exclude: ['health'],
+  });
+  
+  // Register the health check endpoint
+  const healthCheck = app.getHttpAdapter().getInstance();
+  healthCheck.use('/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
   
   const port = process.env.PORT || 3002;
   await app.listen(port, '0.0.0.0');
