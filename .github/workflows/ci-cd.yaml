@@ -7,7 +7,9 @@ on:
     branches: [main, develop]
 
 env:
-  REGISTRY: ghcr.io
+  # Switch to Docker Hub instead of GitHub Container Registry
+  REGISTRY: docker.io
+  IMAGE_PREFIX: yashmak22
   KUBECONFIG_SECRET: ${{ secrets.KUBECONFIG }}
 
 jobs:
@@ -110,12 +112,12 @@ jobs:
             echo "VERSION=dev-$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
           fi
       
-      - name: Login to GitHub Container Registry
+      - name: Login to Docker Hub
         uses: docker/login-action@v2
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ env.IMAGE_PREFIX }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       
       - name: Build and push
         uses: docker/build-push-action@v4
@@ -123,8 +125,8 @@ jobs:
           context: ./${{ matrix.service }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/alpha-${{ matrix.service }}:${{ env.VERSION }}
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/alpha-${{ matrix.service }}:latest-${{ env.ENV_NAME }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/alpha-${{ matrix.service }}:${{ env.VERSION }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/alpha-${{ matrix.service }}:latest-${{ env.ENV_NAME }}
 
   # Deploy to Kubernetes
   deploy:
@@ -155,7 +157,7 @@ jobs:
           
           # Update image tags
           for service in agent-service prompt-service memory-service tools-service dashboard; do
-            kustomize edit set image alpha/${service}=${{ env.REGISTRY }}/${{ github.repository_owner }}/alpha-${service}:${{ env.VERSION }}
+            kustomize edit set image alpha/${service}=${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/alpha-${service}:${{ env.VERSION }}
           done
       
       - name: Setup kubectl
