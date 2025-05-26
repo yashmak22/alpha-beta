@@ -9,7 +9,7 @@ services:
     plan: starter
     buildCommand: npm install && npm run build
     startCommand: node dist/main.js
-    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    repo:  # Replace with your GitHub repo
     branch: main
     buildFilter:
       paths:
@@ -37,7 +37,7 @@ services:
     plan: starter
     buildCommand: npm install && npm run build
     startCommand: node dist/main.js
-    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    repo: https://github.com/yashmak22/alpha-beta  # Replace with your GitHub repo
     branch: main
     buildFilter:
       paths:
@@ -61,7 +61,7 @@ services:
     plan: starter
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
-    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    repo: https://github.com/yashmak22/alpha-beta  # Replace with your GitHub repo
     branch: main
     buildFilter:
       paths:
@@ -81,7 +81,7 @@ services:
     plan: starter
     buildCommand: npm install && npm run build
     startCommand: node dist/main.js
-    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    repo: https://github.com/yashmak22/alpha-beta  # Replace with your GitHub repo
     branch: main
     buildFilter:
       paths:
@@ -103,7 +103,7 @@ services:
     plan: starter
     buildCommand: npm install && npm run build
     startCommand: node dist/main.js
-    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    repo: https://github.com/yashmak22/alpha-beta  # Replace with your GitHub repo
     branch: main
     buildFilter:
       paths:
@@ -125,7 +125,7 @@ services:
     plan: starter
     buildCommand: cd api-gateway && npm install
     startCommand: cd api-gateway && node index.js
-    repo: https://github.com/yourusername/alpha-beta  # Replace with your GitHub repo
+    repo: https://github.com/yashmak22/alpha-beta  # Replace with your GitHub repo
     branch: main
     buildFilter:
       paths:
