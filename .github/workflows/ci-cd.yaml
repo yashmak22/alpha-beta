@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main, develop]
 
+env:
+  # Render.com API Key for deployments
+  RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+
 jobs:
   # Run tests and linting
   test:
@@ -80,22 +84,53 @@ jobs:
         working-directory: ${{ matrix.service }}
         run: pytest
 
-  # Notification that tests passed
-  notify-success:
+  # Deploy to manually configured Render.com services
+  # IMPORTANT: Replace the placeholder service_id values below with your actual Render.com service IDs
+  # You can find your service IDs in the Render.com dashboard URL when viewing a service
+  # Format: https://dashboard.render.com/web/srv-abc123 (srv-abc123 is the service ID)
+  deploy:
     needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      matrix:
+        include:
+          - service: agent-service
+            service_id: srv-abc123456  # Replace with your actual Render service ID
+          - service: prompt-service
+            service_id: srv-def456789  # Replace with your actual Render service ID
+          - service: memory-service
+            service_id: srv-ghi789012  # Replace with your actual Render service ID
+          - service: tools-service
+            service_id: srv-jkl345678  # Replace with your actual Render service ID
+          - service: dashboard
+            service_id: srv-mno901234  # Replace with your actual Render service ID
     steps:
-      - name: Set environment variables
+      - name: Deploy to Render.com
+        if: env.RENDER_API_KEY != ''
         run: |
-          if [[ $GITHUB_REF == 'refs/heads/main' ]]; then
-            echo "ENV_NAME=production" >> $GITHUB_ENV
+          echo "Deploying ${{ matrix.service }} to Render.com..."
+          
+          # Make API call to Render to trigger a deploy
+          DEPLOY_RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer ${{ env.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            "https://api.render.com/v1/services/${{ matrix.service_id }}/deploys" \
+            -d '{"clearCache": true}')
+          
+          # Check if the API call was successful
+          if [[ "$DEPLOY_RESPONSE" == *"id"* ]]; then
+            echo "✅ Successfully triggered deployment for ${{ matrix.service }}"
+            echo "Response: $DEPLOY_RESPONSE"
           else
-            echo "ENV_NAME=development" >> $GITHUB_ENV
+            echo "❌ Failed to trigger deployment for ${{ matrix.service }}"
+            echo "Response: $DEPLOY_RESPONSE"
+            exit 1
           fi
       
-      - name: Notification
+      - name: Notification (No API Key)
+        if: env.RENDER_API_KEY == ''
         run: |
-          echo "✅ All tests have passed! Changes are being deployed to ${{ env.ENV_NAME }} environment."
-          echo "Render.com will automatically deploy the services from your GitHub repository."
-          echo "Check your Render.com dashboard for deployment status."
+          echo "⚠️ RENDER_API_KEY is not set. Unable to trigger automatic deployments."
+          echo "Please add your Render API key as a GitHub secret named RENDER_API_KEY."
+          echo "Alternatively, manually deploy your services from the Render dashboard."
