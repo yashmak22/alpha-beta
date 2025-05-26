@@ -21,7 +21,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   
   const port = process.env.PORT || 3002;
-  await app.listen(port);
-  console.log(`Prompt service is running on port ${port}`);
+  await app.listen(port, '0.0.0.0');
+  console.log(`Prompt service is running on port ${port} and bound to all interfaces (0.0.0.0)`);
 }
 bootstrap();
