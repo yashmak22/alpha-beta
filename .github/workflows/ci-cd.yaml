@@ -21,7 +21,7 @@ jobs:
           - prompt-service
           - memory-service
           - tools-service
-          - dashboard
+          - api-gateway
     steps:
       - uses: actions/checkout@v3
       
@@ -96,15 +96,15 @@ jobs:
       matrix:
         include:
           - service: agent-service
-            service_id: srv-abc123456  # Replace with your actual Render service ID
+            service_id: srv-d0q9lc95pdvs73adl5kg  # Replace with your actual Render service ID
           - service: prompt-service
-            service_id: srv-def456789  # Replace with your actual Render service ID
+            service_id: srv-d0q9nfjipnbc73e675n0  # Replace with your actual Render service ID
           - service: memory-service
-            service_id: srv-ghi789012  # Replace with your actual Render service ID
+            service_id: srv-d0q9p00dl3ps73eorhkg  # Replace with your actual Render service ID
           - service: tools-service
-            service_id: srv-jkl345678  # Replace with your actual Render service ID
-          - service: dashboard
-            service_id: srv-mno901234  # Replace with your actual Render service ID
+            service_id: srv-d0q9qbumcj7s73drfdv0  # Replace with your actual Render service ID
+          - service: api-gateway
+            service_id: srv-d0q9k3emcj7s73dr7t4g  # Replace with your actual Render service ID
     steps:
       - name: Deploy to Render.com
         if: env.RENDER_API_KEY != ''
