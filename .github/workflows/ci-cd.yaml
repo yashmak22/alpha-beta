@@ -44,7 +44,13 @@ jobs:
       - name: Install dependencies (Node.js)
         if: ${{ matrix.service == 'agent-service' || matrix.service == 'prompt-service' || matrix.service == 'dashboard' }}
         working-directory: ${{ matrix.service }}
-        run: npm ci
+        run: |
+          # Install build dependencies for sqlite3
+          if [[ "${{ matrix.service }}" == "agent-service" || "${{ matrix.service }}" == "prompt-service" ]]; then
+            sudo apt-get update
+            sudo apt-get install -y python3 build-essential
+          fi
+          npm ci
       
       - name: Install dependencies (Python)
         if: ${{ matrix.service == 'memory-service' || matrix.service == 'tools-service' }}
